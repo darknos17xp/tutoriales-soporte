@@ -39,7 +39,6 @@
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #0b0f19; }
         ::-webkit-scrollbar-thumb { background: #2a364f; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #3b4c6e; }
     </style>
 </head>
 <body class="bg-brandDark text-slate-100 min-h-screen flex flex-col antialiased selection:bg-red-500 selection:text-white">
@@ -65,7 +64,7 @@
 
                 <!-- Admin Toggle Switch for Mobile -->
                 <div class="sm:hidden flex items-center">
-                    <button onclick="toggleAdminMode()" id="adminToggleBtnMobile" class="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-slate-800 text-slate-300 border border-brandBorder">
+                    <button onclick="handleMobileAuthClick()" id="adminToggleBtnMobile" class="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-slate-800 text-slate-300 border border-brandBorder">
                         <i class="fa-solid fa-lock text-slate-400"></i>
                         <span>Modo Público</span>
                     </button>
@@ -74,15 +73,12 @@
 
             <!-- Navbar Actions & Admin Switch (Desktop) -->
             <div class="flex items-center gap-4 w-full sm:w-auto justify-end">
-                <!-- Admin Mode Switch -->
-                <div class="hidden sm:flex items-center bg-brandCard p-1 rounded-xl border border-brandBorder shadow-inner">
-                    <button onclick="setRole('public')" id="rolePublicBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 bg-red-600 text-white shadow-md">
-                        <i class="fa-solid fa-user-group text-xs"></i>
-                        <span>Vista Pública</span>
-                    </button>
-                    <button onclick="setRole('admin')" id="roleAdminBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-user-shield text-xs"></i>
-                        <span>Administrador</span>
+                <!-- Auth Controller Container -->
+                <div class="flex items-center gap-2">
+                    <span id="userEmailBadge" class="hidden text-xs text-slate-400"></span>
+                    <button onclick="handleAuthActionBtn()" id="authActionBtn" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 bg-slate-800 text-slate-300 border border-brandBorder hover:bg-slate-700">
+                        <i class="fa-solid fa-lock text-slate-400"></i>
+                        <span id="authBtnText">Acceso Creador</span>
                     </button>
                 </div>
 
@@ -140,33 +136,40 @@
             <p>© <span id="currentYear"></span> TutorialHub — Plataforma de Conocimiento y Soporte</p>
             <div class="flex items-center gap-4 text-slate-400">
                 <span class="hover:text-slate-200 transition flex items-center gap-1">
-                    <i class="fa-solid fa-shield-halved text-xs text-red-500"></i> Soporte Oficial
+                    <i class="fa-solid fa-shield-halved text-xs text-red-500"></i> Soporte Oficial Seguro
                 </span>
             </div>
         </div>
     </footer>
 
-    <!-- MODAL 1: Login Admin PIN -->
-    <div id="adminPinModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <!-- MODAL 1: Login Firebase Auth (Correo y Clave) -->
+    <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-brandCard border border-brandBorder w-full max-w-md rounded-2xl shadow-2xl overflow-hidden p-6 text-center space-y-4">
             <div class="w-12 h-12 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full flex items-center justify-center mx-auto text-xl">
-                <i class="fa-solid fa-key"></i>
+                <i class="fa-solid fa-user-shield"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-white">Acceso a Administrador</h3>
-                <p class="text-xs text-slate-400 mt-1">Ingresa el PIN para habilitar la edición de contenidos.</p>
-                <span class="inline-block mt-1 text-[11px] bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">PIN por defecto: <strong>1234</strong></span>
+                <h3 class="text-lg font-bold text-white">Acceso Seguro de Administrador</h3>
+                <p class="text-xs text-slate-400 mt-1">Ingresa tus credenciales registradas en Firebase Auth.</p>
             </div>
-            <form onsubmit="verifyAdminPin(event)" class="space-y-4">
-                <input type="password" id="adminPinInput" maxlength="6" required placeholder="Ingresa PIN"
-                    class="w-full text-center text-xl tracking-widest py-3 bg-slate-900 border border-brandBorder rounded-xl text-white focus:outline-none focus:border-red-500">
-                <div id="pinErrorMsg" class="text-xs text-red-400 hidden">PIN incorrecto. Intenta nuevamente.</div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeAdminPinModal()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
+            <form onsubmit="handleFirebaseLogin(event)" class="space-y-3 text-left">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Correo Electrónico</label>
+                    <input type="email" id="authEmailInput" required placeholder="tucorreo@dominio.com"
+                        class="w-full px-3.5 py-2.5 bg-slate-900 border border-brandBorder rounded-xl text-xs text-white focus:outline-none focus:border-red-500">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="authPasswordInput" required placeholder="••••••••"
+                        class="w-full px-3.5 py-2.5 bg-slate-900 border border-brandBorder rounded-xl text-xs text-white focus:outline-none focus:border-red-500">
+                </div>
+                <div id="authErrorMsg" class="text-xs text-red-400 hidden text-center"></div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeAuthModal()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
                         Cancelar
                     </button>
                     <button type="submit" class="w-1/2 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-lg shadow-red-600/30 transition">
-                        Entrar
+                        Iniciar Sesión
                     </button>
                 </div>
             </form>
@@ -307,84 +310,56 @@
         <div id="toastMessage" class="text-xs font-medium">Operación realizada exitosamente</div>
     </div>
 
-    <!-- Application Script + Firebase Cloud Firestore Modular Integration -->
+    <!-- Application Script + Firebase Cloud Firestore & Auth Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { 
             getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc 
         } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { 
+            getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-        // CONFIGURACIÓN DE FIREBASE (Reemplaza con tus claves de Firebase Console)
+        // CONFIGURACIÓN DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyCU0ee0Q8D8S7isbvsdbFPF1DmQCQ-Tvq0",
             authDomain: "tutoriales-soporte.firebaseapp.com",
             projectId: "tutoriales-soporte",
             storageBucket: "tutoriales-soporte.firebasestorage.app",
             messagingSenderId: "31441389630",
-            appId: "1:31441389630:web:0995f4f6d545b6a539296f"
+            appId: "1:31441389630:web:0995f4f6d545b6a539296f",
             measurementId: "G-P5922NDGH9"
         };
 
-        // Check if Firebase keys are default or provided
-        const isFirebaseConfigured = firebaseConfig.projectId !== "tu-proyecto";
-        let db = null;
-
-        if (isFirebaseConfigured) {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            console.log("🔥 Firebase Firestore activado y conectado.");
-        } else {
-            console.warn("⚠️ Firebase sin configurar. Funcionando en modo de datos locales (localStorage).");
-        }
-
-        // Datos Iniciales de Ejemplo
-        const initialTutorials = [
-            {
-                id: "tut-101",
-                title: "Configuración e Instalación de Sistema de Punto de Venta",
-                youtubeId: "dQw4w9WgXcQ",
-                category: "Puntos de Venta",
-                date: "2024-03-10",
-                description: "Tutorial completo para instalar la base de datos local, configurar la impresora térmica por puerto COM y vincular el escáner de código de barras.",
-                issues: [
-                    {
-                        id: "iss-1",
-                        severity: "Alta",
-                        timestamp: "04:15",
-                        detail: "Error 'Driver non-compatible' en Windows 11 al intentar conectar la impresora térmica USB.",
-                        solution: "Descargar el driver en modo firmado desde la web del fabricante e instalar mediante el Administrador de Dispositivos seleccionando la opción 'Generic Text Only'."
-                    }
-                ],
-                questions: [
-                    {
-                        id: "q-1",
-                        user: "Carlos Méndez",
-                        date: "2024-03-12",
-                        text: "¿Este procedimiento sirve para impresoras térmicas Bluetooth de 58mm?",
-                        status: "Resuelta",
-                        reply: "Hola Carlos. Sí sirve, pero debes emparejar primero el puerto COM virtual en el Bluetooth de Windows antes del paso del minuto 03:00."
-                    }
-                ]
-            }
-        ];
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // Estado Global
         window.currentRole = 'public';
+        window.currentUserEmail = null;
         window.tutorials = [];
         window.activeCategory = 'Todas';
         window.activeTabs = {};
 
-        // Inicialización de la Aplicación
+        // Inicialización de la Aplicación y Vigilante de Sesión (Auth Observer)
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentYear').textContent = new Date().getFullYear();
-            if (isFirebaseConfigured) {
-                listenFirestoreTutorials();
-            } else {
-                loadLocalTutorials();
-                window.renderCategories();
-                window.renderTutorials();
-            }
-            window.updateRoleUI();
+            
+            // Escuchar cambios de estado en Firebase Auth en tiempo real
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    window.currentRole = 'admin';
+                    window.currentUserEmail = user.email;
+                    window.showToast(`Sesión iniciada como: ${user.email}`, "info");
+                } else {
+                    window.currentRole = 'public';
+                    window.currentUserEmail = null;
+                }
+                window.updateRoleUI();
+            });
+
+            listenFirestoreTutorials();
         });
 
         // Cargar desde Firestore en tiempo real
@@ -399,46 +374,24 @@
                 window.renderTutorials();
             }, (error) => {
                 console.error("Error al leer desde Firestore: ", error);
-                loadLocalTutorials();
             });
         }
 
-        function loadLocalTutorials() {
-            const saved = localStorage.getItem('tutorialhub_full_data');
-            if (saved) {
-                try { window.tutorials = JSON.parse(saved); } catch (e) { window.tutorials = initialTutorials; }
-            } else {
-                window.tutorials = initialTutorials;
-                saveLocalTutorials();
-            }
-        }
-
-        function saveLocalTutorials() {
-            localStorage.setItem('tutorialhub_full_data', JSON.stringify(window.tutorials));
-        }
-
         async function syncTutorialToStorage(tut) {
-            if (isFirebaseConfigured && db) {
-                try {
-                    await setDoc(doc(db, "tutorials", tut.id), tut);
-                } catch (e) {
-                    console.error("Error al sincronizar en Firestore: ", e);
-                }
-            } else {
-                saveLocalTutorials();
+            try {
+                await setDoc(doc(db, "tutorials", tut.id), tut);
+            } catch (e) {
+                console.error("Error al sincronizar en Firestore: ", e);
+                window.showToast("Error de permisos: Asegúrate de iniciar sesión.", "error");
             }
         }
 
         async function deleteTutorialFromStorage(tutId) {
-            if (isFirebaseConfigured && db) {
-                try {
-                    await deleteDoc(doc(db, "tutorials", tutId));
-                } catch (e) {
-                    console.error("Error al eliminar en Firestore: ", e);
-                }
-            } else {
-                window.tutorials = window.tutorials.filter(t => t.id !== tutId);
-                saveLocalTutorials();
+            try {
+                await deleteDoc(doc(db, "tutorials", tutId));
+            } catch (e) {
+                console.error("Error al eliminar en Firestore: ", e);
+                window.showToast("Error de permisos al eliminar.", "error");
             }
         }
 
@@ -451,64 +404,71 @@
             return (match && match[2].length === 11) ? match[2] : str;
         }
 
-        // Modos de Usuario
-        window.setRole = function(role) {
-            if (role === 'admin' && window.currentRole !== 'admin') {
-                window.openAdminPinModal();
-            } else {
-                window.currentRole = role;
-                window.updateRoleUI();
-            }
-        };
-
-        window.toggleAdminMode = function() {
+        // Acciones de Autenticación Firebase
+        window.handleAuthActionBtn = function() {
             if (window.currentRole === 'admin') {
-                window.currentRole = 'public';
-                window.updateRoleUI();
+                signOut(auth).then(() => {
+                    window.showToast("Sesión cerrada correctamente", "info");
+                }).catch((error) => {
+                    console.error(error);
+                });
             } else {
-                window.openAdminPinModal();
+                document.getElementById('authModal').classList.remove('hidden');
+                document.getElementById('authEmailInput').value = '';
+                document.getElementById('authPasswordInput').value = '';
+                document.getElementById('authErrorMsg').classList.add('hidden');
             }
         };
 
-        window.openAdminPinModal = function() {
-            document.getElementById('adminPinModal').classList.remove('hidden');
-            document.getElementById('adminPinInput').value = '';
-            document.getElementById('pinErrorMsg').classList.add('hidden');
+        window.handleMobileAuthClick = function() {
+            window.handleAuthActionBtn();
         };
 
-        window.closeAdminPinModal = function() {
-            document.getElementById('adminPinModal').classList.add('hidden');
+        window.closeAuthModal = function() {
+            document.getElementById('authModal').classList.add('hidden');
         };
 
-        window.verifyAdminPin = function(e) {
+        window.handleFirebaseLogin = async function(e) {
             e.preventDefault();
-            const pin = document.getElementById('adminPinInput').value;
-            if (pin === '1234') {
-                window.currentRole = 'admin';
-                window.closeAdminPinModal();
-                window.updateRoleUI();
-                window.showToast("Modo Administrador Activado", "info");
-            } else {
-                document.getElementById('pinErrorMsg').classList.remove('hidden');
+            const email = document.getElementById('authEmailInput').value.trim();
+            const password = document.getElementById('authPasswordInput').value;
+            const errorMsg = document.getElementById('authErrorMsg');
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.closeAuthModal();
+            } catch (error) {
+                errorMsg.textContent = "Credenciales inválidas o usuario no autorizado.";
+                errorMsg.classList.remove('hidden');
             }
         };
 
         window.updateRoleUI = function() {
-            const publicBtn = document.getElementById('rolePublicBtn');
-            const adminBtn = document.getElementById('roleAdminBtn');
+            const authBtn = document.getElementById('authActionBtn');
+            const btnText = document.getElementById('authBtnText');
             const mobileBtn = document.getElementById('adminToggleBtnMobile');
             const addTutBtn = document.getElementById('addTutorialNavBtn');
             const banner = document.getElementById('roleBanner');
+            const emailBadge = document.getElementById('userEmailBadge');
 
             if (window.currentRole === 'admin') {
-                publicBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
-                adminBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-red-600 text-white shadow-md";
-                mobileBtn.innerHTML = `<i class="fa-solid fa-user-shield text-red-400"></i> <span>Modo Admin</span>`;
+                authBtn.className = "px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30";
+                btnText.textContent = "Cerrar Sesión";
+                authBtn.querySelector('i').className = "fa-solid fa-right-from-bracket text-red-400";
+                
+                emailBadge.textContent = window.currentUserEmail;
+                emailBadge.classList.remove('hidden');
+
+                mobileBtn.innerHTML = `<i class="fa-solid fa-user-shield text-red-400"></i> <span>Admin (Salir)</span>`;
                 addTutBtn.classList.remove('hidden');
-                banner.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-lock-open mr-1"></i> MODO ADMINISTRADOR ACTIVO:</span> <span class="text-slate-300">Puedes crear, editar o eliminar videos, notas de fallas y responder consultas.</span>`;
+                banner.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-lock-open mr-1"></i> MODO ADMINISTRADOR SEGURO:</span> <span class="text-slate-300">Autenticado vía Firebase Auth. Puedes gestionar videos y responder consultas.</span>`;
             } else {
-                publicBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-red-600 text-white shadow-md";
-                adminBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
+                authBtn.className = "px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 bg-slate-800 text-slate-300 border border-brandBorder hover:bg-slate-700";
+                btnText.textContent = "Acceso Creador";
+                authBtn.querySelector('i').className = "fa-solid fa-lock text-slate-400";
+                
+                emailBadge.classList.add('hidden');
+
                 mobileBtn.innerHTML = `<i class="fa-solid fa-lock text-slate-400"></i> <span>Modo Público</span>`;
                 addTutBtn.classList.add('hidden');
                 banner.innerHTML = `<span class="text-slate-400">Estás en <strong class="text-white">Modo Público</strong>. Puedes reproducir videos, revisar fallas conocidas y enviar tus preguntas al creador.</span>`;
@@ -995,7 +955,7 @@
             const toastIcon = document.getElementById('toastIcon');
 
             toastMsg.textContent = msg;
-            if (type === "info") {
+            if (type === "info" || type === "error") {
                 toastIcon.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i>`;
             } else {
                 toastIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i>`;
